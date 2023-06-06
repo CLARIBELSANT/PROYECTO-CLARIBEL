@@ -12,15 +12,17 @@ knitr::opts_chunk$set(echo = TRUE)
 # install.packages("mice")
 # install.packages("VIM")
 library(VIM)
-library(mice)
+library(mice)#imputar
 library(dplyr)
+library(ggcorrplot)#matrices de correlaciones y distancias
+library(corrplot)#matrices de correlaciones y distancias
 ```
-# BASE DE DATOS
+## BASE DE DATOS
 
 * Cargamos las bases de datos *heroesInformation* y *characterStats*. Quitamos los nombres duplicados y unimos  *DC_Marvel* con *infoStats* según sus nombres.
 
 
-```{r base-de-datos,results="hide"}
+```{r base-de-datos, results="hide"}
 infoHeroes <- read.csv("~/PROYECTO-CLARIBEL/Data/heroesInformation.csv", na.strings = c("-", "-99", "-99.0")) 
 infoStats <- read.csv("~/PROYECTO-CLARIBEL/Data/charactersStats.csv", na.strings = "")
 colnames(infoHeroes)[2] <- "Name"
@@ -34,42 +36,151 @@ DC_Marvel <- DC_Marvel %>%
   filter(!duplicated(Name))
 
 Dc_Marvel_StatsInfo <- left_join(DC_Marvel, infoStats, by = "Name")
+
 ```
 
-* Usamos la función aggr() para calcular resúmenes estadísticos para subconjuntos de datos. En particular, queremos calcular los NA en nuestra base de datos.
-
+* Usamos la función aggr() para calcular resúmenes estadísticos para subconjuntos de datos. En particular, queremos calcular los NA en nuestra base de datos. 
 ```{r, message=FALSE,warning=FALSE,results='hide'}
-Dc_Marvel_StatsInfo <- Dc_Marvel_StatsInfo[,-9]
-
 aggr_plot <- aggr(Dc_Marvel_StatsInfo, col=c('navyblue','red'), numbers=TRUE, sortVars=TRUE, labels=names(Dc_Marvel_StatsInfo), 
                  cex.axis=.7, gap=3, ylab=c("Histogram of missing data","Pattern"))
+```
 
+```{r, message=FALSE,warning=FALSE,results='hide'}
+Dc_Marvel_StatsInfo<-Dc_Marvel_StatsInfo[,-19]#SE MODIFICARÁ AL IMPUTAR
+Dc_Marvel_StatsInfo <- Dc_Marvel_StatsInfo[,-12]#ESTÁ REPETIDO
+Dc_Marvel_StatsInfo <- Dc_Marvel_StatsInfo[,-9]#ES LA COLUMNA CON MÁS NA
+Dc_Marvel_StatsInfo<-Dc_Marvel_StatsInfo[,-1]#NO SABEMOS QUE SIGNIFICA X
+
+
+```
+
+* Para no reducir tanto la base de datos, cambiamos los valores con NA de las columnas no numéricas por "Undefined". 
+```{r, message=FALSE,warning=FALSE,results='hide'}
 Dc_Marvel_StatsInfo$Race[is.na(Dc_Marvel_StatsInfo$Race)] <- "Undefined"
 Dc_Marvel_StatsInfo$Eye.color[is.na(Dc_Marvel_StatsInfo$Eye.color)] <- "Undefined"
 Dc_Marvel_StatsInfo$Alignment.x[is.na(Dc_Marvel_StatsInfo$Alignment.x)] <- "Undefined"
-
 Dc_Marvel_StatsInfo$Hair.color[is.na(Dc_Marvel_StatsInfo$Hair.color)] <- "Undefined"
 Dc_Marvel_StatsInfo$Gender[is.na(Dc_Marvel_StatsInfo$Gender)] <- "Undefined"
-
 ```
+* Los datos faltantes son
+  * *Completatemente aleatorios* si la razón de la falta de datos es ajena a los datos mismos es decir, no depende de la categoría  del resto de las variables.
+  * *No aleatorios* si no son completamente aleatorios.
+  * *Aleatorio* si no depende de las categorías pero si puede depender de otras variables.
 
+Como todos los datos faltantes que nos quedan son Aleatorios o completamente aleatorios usamos el método de imputación de datos.
+Idealmente, queremos no cambiar la distribución de nuestros datos.\
+
+*Imputación con la media*:
+N=Antes de la imputación,
+R=con la imputación.
 ```{r,warning=FALSE}
+# https://rpubs.com/ydmarinb/429757
 columns <- c("Weight", "Height")
 imputed_data <- mice(Dc_Marvel_StatsInfo[,names(Dc_Marvel_StatsInfo) %in% columns],m = 1,
   maxit = 1, method = "mean",seed = 2018,print=F)
 complete.data <- mice::complete(imputed_data)
+par(mfrow=c(1,2))
+plot(density(Dc_Marvel_StatsInfo$Weight,na.rm = T),col=1,main="Weight")
+lines(density(complete.data$Weight),col=2)
+plot(density(Dc_Marvel_StatsInfo$Height,na.rm = T),col=1,main="Height")
+lines(density(complete.data$Height),col=2)
+
+
+impute_arg<-round(as.data.frame(complete.data))
+
+Dc_Marvel_StatsInfo["Weight"]<-impute_arg["Weight"]
+Dc_Marvel_StatsInfo["Height"]<-impute_arg["Height"]
+
 ```
 
+
+*Imputación mediante regresión*:
+N=Antes de la imputación,
+R=con la imputación.
+```{r,warning=FALSE}
+columns<-c("Intelligence","Strength")
+impute_arg1  <- mice(Dc_Marvel_StatsInfo[,names(Dc_Marvel_StatsInfo) %in% columns],m = 1,
+  maxit = 1, method = "norm.predict",seed = 2018,print=F)
+
+impute_arg <- mice::complete(impute_arg1)
+par(mfrow=c(1,2))
+plot(density(Dc_Marvel_StatsInfo$Intelligence,na.rm =T),col=1,main="Intelligence")
+lines(density(impute_arg$Intelligence),col=2)
+plot(density(Dc_Marvel_StatsInfo$Strength,na.rm = T),col=1,main="Strength")
+lines(density(impute_arg$Strength),col=2)
+
+impute_arg<-round(as.data.frame(impute_arg))
+
+Dc_Marvel_StatsInfo["Intelligence"]<-impute_arg["Intelligence"]
+Dc_Marvel_StatsInfo["Strength"]<-impute_arg["Strength"]
+
+
+```
+
+*Imputación mediante regresión*:
+N=Antes de la imputación,
+R=con la imputación.
+```{r,warning=FALSE}
+columns<-c("Durability","Power")
+impute_arg1  <- mice(Dc_Marvel_StatsInfo[,names(Dc_Marvel_StatsInfo) %in% columns],m = 1,
+  maxit = 1, method = "norm.predict",seed = 2018,print=F)
+
+impute_arg <- mice::complete(impute_arg1)
+par(mfrow=c(1,2))
+plot(density(Dc_Marvel_StatsInfo$Durability,na.rm =T),col=1,main="Durability")
+lines(density(impute_arg$Durability),col=2)
+plot(density(Dc_Marvel_StatsInfo$Power,na.rm = T),col=1,main="Power")
+lines(density(impute_arg$Power),col=2)
+
+impute_arg<-round(as.data.frame(impute_arg))
+
+Dc_Marvel_StatsInfo["Durability"]<-impute_arg["Durability"]
+Dc_Marvel_StatsInfo["Power"]<-impute_arg["Power"]
+
+```
+
+
+
+
+*Imputación mediante regresión*:
+N=Antes de la imputación,
+R=con la imputación.
+```{r,warning=FALSE}
+columns<-c("Speed","Combat")
+impute_arg1  <- mice(Dc_Marvel_StatsInfo[,names(Dc_Marvel_StatsInfo) %in% columns],m = 1,
+  maxit = 1, method = "norm.predict",seed = 2018,print=F)
+
+impute_arg <- mice::complete(impute_arg1)
+par(mfrow=c(1,2))
+plot(density(Dc_Marvel_StatsInfo$Speed,na.rm =T),col=1,main="Speed")
+lines(density(impute_arg$Speed),col=2)
+plot(density(Dc_Marvel_StatsInfo$Combat,na.rm = T),col=1,main="Combat")
+lines(density(impute_arg$Combat),col=2)
+
+impute_arg<-round(as.data.frame(impute_arg))
+
+Dc_Marvel_StatsInfo["Speed"]<-impute_arg["Speed"]
+Dc_Marvel_StatsInfo["Combat"]<-impute_arg["Combat"]
+```
+* Después de haber imputado y eliminado algunas columnas. Verificamos que nuestra nueva base de datos no tiene columnas con NA. 
+```{r, warning=FALSE, message=FALSE}
+
+colSums(is.na(Dc_Marvel_StatsInfo))
+```
+
+
+
+
+## MUESTRA DE LA BASE DE DATOS
+Dividimos nuestra nueva base de datos por compañía. En lo que sigue trabajaremos solamente con los heroes de DC_Marvel.\
+
+* contamos con 15 variables y por lo tanto 15 varianzas y 105 covarianzas
 
 ```{r}
-# https://rpubs.com/ydmarinb/429757
-par(mfrow=c(1,2))
-plot(density(Dc_Marvel_StatsInfo$Weight,na.rm = T),col=2,main="Weight")
-lines(density(complete.data$Weight),col=3)
-plot(density(Dc_Marvel_StatsInfo$Height,na.rm = T),col=2,main="Height")
-lines(density(complete.data$Height),col=3)
+BASE_DC <- subset(Dc_Marvel_StatsInfo, Publisher == "DC Comics")  
+summary(BASE_DC)
 ```
-
+* En este caso las variables numéricas tiene escalas de medición similares (la mayoría está entre 1 y 100). Por esta razón no trabajamos con el coeficiente de correlación, trabajamos con 
 
 
 
