@@ -7,7 +7,7 @@ output: html_document
 
 
 
-```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+```{r, message=FALSE, warning=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 # install.packages("mice")
 # install.packages("VIM")
@@ -15,7 +15,9 @@ library(VIM)
 library(mice)#imputar
 library(dplyr)
 library(ggcorrplot)#matrices de correlaciones y distancias
-library(corrplot)#matrices de correlaciones y distancias
+library(corrplot)#matrices de correlaciones y distancias}
+library(aplpack)#CARITAS DE CHERNOFF
+library(lattice)#GRÁFICO DE PARALELAS
 ```
 ## BASE DE DATOS
 
@@ -180,7 +182,52 @@ Dividimos nuestra nueva base de datos por compañía. En lo que sigue trabajarem
 BASE_DC <- subset(Dc_Marvel_StatsInfo, Publisher == "DC Comics")  
 summary(BASE_DC)
 ```
-* En este caso las variables numéricas tiene escalas de medición similares (la mayoría está entre 1 y 100). Por esta razón no trabajamos con el coeficiente de correlación, trabajamos con 
+
+* En este caso las variables numéricas tienen escalas muy diferentes de medición (obtenemos valores negativos y mayores a 1000). Por esta razón trabajamos con el coeficiente de correlación.
+* Hacemos un plot de la correlación, corrplot(), esto es importante para identificar la estructura y el patrón ocultos en la matriz.
+
+
+```{r}
+numDC<-dplyr::select_if(BASE_DC, is.numeric)
+
+cov(numDC)
+M<-cor(numDC)
+M
+corrplot(M, method = 'number')
+
+```
+
+
+### PLots gráficos multivariados
+*Hacemos un gráfico de paralelas de las variables con mayor y menor correlación
+```{r}
+numDC<-cbind(numDC,BASE_DC$Gender)
+numDC
+stars(numDC[, 1:8], locations = c(0, 0), radius = FALSE,
+      key.loc = c(0, 0), main = "Motor Trend Cars", lty = 2)
+```
+
+*Una manera gráfica de abordar las relaciones entre variables es utilizando una matriz de scatterplots:
+```{r}
+plot(numDC[,1:8], pch='*',col=c("red", "green", "blue")[unclass(numDC[,9])])
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
