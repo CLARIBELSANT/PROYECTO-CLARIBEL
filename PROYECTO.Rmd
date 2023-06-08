@@ -18,6 +18,7 @@ library(ggcorrplot)#matrices de correlaciones y distancias
 library(corrplot)#matrices de correlaciones y distancias}
 library(aplpack)#CARITAS DE CHERNOFF
 library(lattice)#GRÁFICO DE PARALELAS
+library(RColorBrewer)
 ```
 ## BASE DE DATOS
 
@@ -179,7 +180,7 @@ Dividimos nuestra nueva base de datos por compañía. En lo que sigue trabajarem
 * contamos con 15 variables y por lo tanto 15 varianzas y 105 covarianzas
 
 ```{r}
-BASE_DC <- subset(Dc_Marvel_StatsInfo, Publisher == "DC Comics")  
+BASE_DC <- as.data.frame(subset(Dc_Marvel_StatsInfo, Publisher == "DC Comics"))  
 summary(BASE_DC)
 ```
 
@@ -199,17 +200,93 @@ corrplot(M, method = 'number')
 
 
 ### PLots gráficos multivariados
-*Hacemos un gráfico de paralelas de las variables con mayor y menor correlación
-```{r}
-numDC<-cbind(numDC,BASE_DC$Gender)
-numDC
-stars(numDC[, 1:8], locations = c(0, 0), radius = FALSE,
-      key.loc = c(0, 0), main = "Motor Trend Cars", lty = 2)
+* Hacemos un scatterplot de las variables númericas y las coloreamos por los niveles de su género.\
+  * En la altura con respecto al peso observemos que la mayoría de los personajes tienen un peso entre 0 y 200, altura entre 100 y 200. Los heroes hombres son los más altos, el peso máximo es el de un hombre mayor a 800. La mayoría de mujeres tienen un peso menor que 100 y altura entre 150 y 200.
+Las mujeres tienen menor altura y menor peso en general. En general, la altura es proporcional al peso. 
+  * Las otras variables no dependen de la altura ni del peso.
+  * En el poder con respecto al combate observemos que el poder no depende del combate.
+  * Los heroes hombres son los que tienen mayor poder y mayor combate.
+ 
+```{r, warning=FALSE,message=FALSE,fig.width=12, fig.height=12}
+#install.packages("psych)
+library(psych)
+c<-c(6,9,10,11,12,13,14,15)
+cl <- c("#FF33CC", "#CC66FF", "#33C9CC", "black")
+pairs(BASE_DC[,c], pch=17, cex=1, col=cl[as.factor(BASE_DC$Gender)],
+     main="Scatterplot DC Heroes", lower.panel = NULL, oma=c(3,3,3,15))
+par(xpd = TRUE)
+legend("bottomright", legend = c(levels(as.factor(BASE_DC$Gender))), pch=17, col=cl[1:3], pt.cex=1.2)
 ```
 
-*Una manera gráfica de abordar las relaciones entre variables es utilizando una matriz de scatterplots:
-```{r}
-plot(numDC[,1:8], pch='*',col=c("red", "green", "blue")[unclass(numDC[,9])])
+
+* Hacemos un plot de las variables altura y peso  y las coloreamos por los niveles de su alineación.
+   * Hay muy pocos personajes con alineación neutral y solo un personaje con alineación indefinida. 
+   * El personaje con más peso y altura es un villano. El personaje con menor altura y peso es un heroe.
+   * La mayoría de heroes y villanos tienen peso menor a 200 y altura mayor a 150 y menor a 200. 
+
+
+```{r, warning=FALSE,message=FALSE,fig.width=12, fig.height=12}
+plot(BASE_DC$Height, BASE_DC$Weight, pch=1, cex=1.5, col=cl[as.factor(BASE_DC$Alignment.x)],
+     main="Height and weight", xlab="Altura", ylab="Peso") 
+legend("bottomright", legend = c(levels(as.factor(BASE_DC$Alignment.x))), pch=1, col=cl[1:4], pt.cex=1.5)
+```
+
+### Análisis por clusters
+* Ahora queremos encontrar patrones o grupos (clusters) dentro del conjunto.
+
+
+```{R, message=FALSE, warning=FALSE,fig.width=12, fig.height=12}
+#install.packages(c("purrr", "kableExtra"))
+library(purrr)
+library(kableExtra)
+
+
+
+
+#Como no queremos que el algoritmo de agrupamiento dependa de una unidad variable arbitraria, comenzamos escalando/estandarizando los datos usando la función R scale:
+
+df <- scale(numDC)
+head(df)
+
+#Primero calculamos los valores de disimilitud con dist y luego usamos hclusty y especificamos el método de aglomeración que se usará (es decir, "completo", "promedio", "único", "sala.D"). Entonces podemos trazar el dendograma.
+
+# Dissimilarity matrix
+d <- dist(df, method = "euclidean")
+
+
+# vector con nombre de los métodos
+m <- c( "average", "single", "complete", "ward.D2", "median", "centroid")
+names(m) <- c( "average", "single", "complete", "ward.D2", "median", "centroid")
+# Función para calcular el coeficiente de correlación
+coef_cor <- function(x) {
+  cor(x=dist, cophenetic(hclust(d=dist, method = x)))
+}
+# Tabla comparativa
+coef_tabla <- map_dbl(m, coef_cor) 
+
+kbl(coef_tabla, booktabs = TRUE, align = "c",
+    caption = "Cuadro comparativo de los coeficientes de correlación",
+    col.names = rownames(coef_tabla)) %>%
+  kable_styling(position = "center",
+                latex_options = c("repeat_header", "hold_position"),
+                font_size = 9) %>%
+  add_header_above(c("Método", "Coeficiente de correlación"))
+
+
+
+
+
+
+# Hierarchical clustering using Complete Linkage
+#hc1 <- hclust(d, method = "complete" )
+#hc2 <- hclust(d, method ="median" )
+#hc3 <- hclust(d, method = "mean" )
+
+# Plot the obtained dendrogram
+#plot(hc1, cex = 0.6, hang = -1)
+#plot(hc2, cex = 0.6, hang = -1)
+#plot(hc3, cex = 0.6, hang = -1)
+
 ```
 
 
@@ -218,9 +295,15 @@ plot(numDC[,1:8], pch='*',col=c("red", "green", "blue")[unclass(numDC[,9])])
 
 
 
+### Análisis de PCA
+
+### Interpretar resultados
 
 
+### Conclusiones
 
+
+###Conclusiones
 
 
 
