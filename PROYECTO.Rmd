@@ -231,6 +231,16 @@ plot(BASE_DC$Height, BASE_DC$Weight, pch=1, cex=1.5, col=cl[as.factor(BASE_DC$Al
 legend("bottomright", legend = c(levels(as.factor(BASE_DC$Alignment.x))), pch=1, col=cl[1:4], pt.cex=1.5)
 ```
 
+* Creamos una gráfica de barras relativa y absoluta de la cantidad de superhéroes por genéro.
+
+```{r}
+t<-table(BASE_DC$Gender)
+barplot(t,ylim=c(0,200))
+
+tr<-(table(BASE_DC$Gender)/206)*100
+barplot(tr,ylim=c(0,80))
+```
+
 ### Análisis por clusters
 * Ahora queremos encontrar patrones o grupos (clusters) dentro del conjunto.
 
@@ -329,7 +339,7 @@ hc_centroid <- hclust(d=dist, method = "centroid")
 fviz_dend(x = hc_average, k=7,
           cex = 0.3,
           main = "Cluster método aver",
-          xlab = "Ciudades",
+          xlab = "Personajes",
           ylab = "Distancias",
           type= "rectangle",
           sub = "",
@@ -352,30 +362,113 @@ hc_average <- as.dendrogram(hc_average)
 
 tanglegram(rank_branches(hc_single),rank_branches(hc_average),
            main_left = "Single",
-           main_right = "Average", lab.cex= 0.7, margin_inner = 5, k_branches = 7)
+           main_right = "Average", lab.cex= 0.3, margin_inner = 5, k_branches = 7)
 ```
 
 
 
 ### Análisis de PCA
 
+* El análisis de componenetes principales tiene como objetivo reducir la dimensión y conservar en lo posible su estructura, es decir la forma de la nube de datos para esto el primer paro es obtener la matriz de correlaciones y la matriz de covarianzas.
+   * Como vimos antes es apropiado tabrajar con la matriz de correlaciones y vimos que hay muchas correlaciones altas, entonces se podría disminuir la dimensión y es apropiado hacer un análisis de componentesprincipales.
+   * Para verificar que en efecto, la matriz es factorizable, aplicamos el criterio de Kaiser-Meyer-Olkin. La prueba de Kaiser-Meyer-Olkin (KMO) es una medida de qué tan adecuados son sus datos para el análisis factorial . La prueba mide la adecuación del muestreo para cada variable en el modelo y para el modelo completo. Dado que las variables son mayores a 80 en está escala podemos hacer la reducción.
+   
+   
+```{r}
+library(psych)
+kmo.1 <-KMO(numDC)
+kmo.1
 
+```
+
+* Calculamos los componentes principales con la función princomp.
+   * Con la instrucción loadings lo que obtenemos son las cargas de los componentes principales. Es decir, lo que obtenemos son los coeficientes que se usarán en las combinaciones lineales para calcular cada componente principal. Por ejemplo, para un conjunto de datos x1,x2,...,xp
+la primera columna que está denotada por Comp.1 tiene los coeficientes  
+a11,a21,...,ap1 de la combinación lineal con la que se obtiene la primera componente principal:Z1=a11x1+a21x2+...ap1xp.
+
+```{r,warning=FALSE,message=FALSE}
+cp1 <- princomp(numDC, cor = TRUE)
+summary(cp1)
+```
+
+ * Esta primera componente principal será la que refleje la mayor variabilidad de los datos. Las cargas son las entradas de cada eigenvector son las siguientes:
+ 
+```{r,warning=FALSE,message=FALSE}
+cp1$loadings 
+```
+
+ La componente principal se escribiría como $$
+(0.112,0.388,0.409,0.389,0.437,417,0.388)(100m-mean(100m),200m−mean(200m),...,Marathon−mean(Marathon))$$
+
+ * Las desviaciones estándar son las raíces de las lambdas.
+
+```{r, message=FALSE,warning=FALSE}
+cp1$sdev
+```
+
+* Para calcular la varianza debemos elevar al cuadrado cada una de las entradas.
+
+```{r, message=FALSE,warning=FALSE}
+varianza.cp1 <- (cp1$sdev)^2
+varianza.cp1
+```
+
+* Una forma de ver con cuantos componentes nos conviene trabajar es con el gráfico de codo.
+
+```{r}
+screeplot(cp1, type="lines")
+```
+
+* Usaremos la función prcomp() y primero realizaremos el análisis sin quitar la variable anterior.
+
+```{r}
+res.pca <- prcomp(numDC, scale = TRUE )
+```
+
+* Vamos a graficar a los personajes y corolearlos por perfiles similares.
+
+```{r}
+fviz_pca_ind(res.pca,
+             col.ind = "cos2", # color por la calidad de representación
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE     # evitar que se sobrelape el texto
+             )
+
+
+fviz_pca_var(res.pca,
+             col.var = "contrib", # Color por contribución al PCA
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE    
+             )
+
+```
 
 
 ### Interpretar resultados
+ * Los resultados los fuimos interpretando en cada paso de análisis de este proyecto
+
+### Resúmen y conclusiones
+ * AL quitar los NA usamos los métodos de eliminación (para la columna con más NA), sustitución (para los valores no númericos) y imputación. En este último fuimos escogiendo la imputación adecuada (que elegimos basándonos en el plot de densidad). Filtrando los personajes de DC, obtuvimos una base de datos a la que llamamos BASE_DC la cuál no contenía valores faltantes ni valores con NA y contaba solo con los datos de DC. Tambíen definimos una base que seleccionaba de BASE_DC, solo los datos numéricos, a esta la llamamos numDC.
+ 
+ * Realizamos las matrices de correlación y covarianza, y concluimos que era más apropiado escalar y trabajar con la matriz de correlación. Las variables con mayor y menor correlación son combate-inteligencia y velocidad-altura respectivamente.
+ 
+
+* Realizamos algunos plots multivariados:
+  * Un scaterplot de los datos de numDC en donde se observaba la relación entre 2 a 2 de las  varriables y lo pintamos por género de los personajes. Obtuvimos qué hay algunos variables que son independientes de otras (ej. Ninguna de las variable dependen de la altura ni del peso) y otras que si (ej. altura y peso).
+  
+  * Hicimos un plot de las variables altura y peso y las coloreamos por los niveles de su alineación. Concluimos que:\
+hay muy pocos personajes con alineación neutral y solo un personaje con alineación indefinida.\
+El personaje con más peso y altura es un villano.\ El personaje con menor altura y peso es un heroe.\
+La mayoría de heroes y villanos tienen peso menor a 200 y altura mayor a 150 y menor a 200.
+
+  * Creamos una gráfica de barras relativa y absoluta de la cantidad de superhéroes por género. Concluimmos que:\ 
+Hay poco más de 50 mujeres y aproximademente 150 hombres,es decir, hay mucho más hombres que mujeres. Esto último se observa mejor en la grafica de barras con porcentajes.
 
 
-### Conclusiones
+* En el anális por cluster, concluimos que es mejor ocupar el método de average y el número óptimo de  clusters es 7. Al final, hicimos el cluster plot mostrando esta agrupacion y comparamos averaje con single en un dendograma.
 
-
-###Conclusiones
-
-
-
-
-
-
-
-
-
+* En el análisis de componentes principales (PCA), aplicamos el criterio (KMO), la cuál nos indicaba qué tan adecuados son los datos para el análisis factorial. Dado que lamayoría de las variables (excepto dos) son mayores a 80 en está escala podemos hacer la reducción de dimensiones.
+  * Calculamos los componentes principales con la función princomp. Obtuvimos datos como la desviación estandar, proporción de varianza y proporción acumulativa con 1, 2,..,7 y 8 componentes. 
+  
+  * Para saber con cuantos componentes nos conviene trabajar hicimos el gráfico de codo. Ahí concluimmos que es mejor trabajar con 2 o tal vez 3 componentes, pero dado a que es más facil interpretar 2 dimenciones, escogemos la primera opción. Finalmente, graficamos a los personajes y los coroleamos por perfiles similares.
 
