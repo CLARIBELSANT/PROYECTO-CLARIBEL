@@ -9,8 +9,6 @@ output: html_document
 
 ```{r, message=FALSE, warning=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-# install.packages("mice")
-# install.packages("VIM")
 library(VIM)
 library(mice)#imputar
 library(dplyr)
@@ -19,6 +17,8 @@ library(corrplot)#matrices de correlaciones y distancias}
 library(aplpack)#CARITAS DE CHERNOFF
 library(lattice)#GRÁFICO DE PARALELAS
 library(RColorBrewer)
+library(purrr)
+library(kableExtra)
 ```
 ## BASE DE DATOS
 
@@ -235,67 +235,132 @@ legend("bottomright", legend = c(levels(as.factor(BASE_DC$Alignment.x))), pch=1,
 * Ahora queremos encontrar patrones o grupos (clusters) dentro del conjunto.
 
 
-```{R, message=FALSE, warning=FALSE,fig.width=12, fig.height=12}
-#install.packages(c("purrr", "kableExtra"))
-library(purrr)
-library(kableExtra)
+```{r, warning=FALSE,message=FALSE,fig.width=12, fig.height=12}
+# Recordemos los datos obtenidos al analizar varianzas y correlaciones
+summary(numDC)
+dim(numDC)
+var(data.matrix(numDC))
+cor.mat_all <- cor(data.matrix(numDC), use="complete.obs")
+cor.mat_all
+```
+
+```{r,message=FALSE,warning=FALSE,results='hide'}
+#  Como no queremos que el algoritmo de agrupamiento dependa de una unidad variable arbitraria, comenzamos escalando/estandarizando los datos usando la función R scale:
+US_df <- scale(numDC)
+head(US_df)
+var(US_df)
+
+#  Calculamos los valores de disimilitud con dist y luego usamos hclusty y especificamos el método de aglomeración que se usará (es decir, "completo", "promedio", etc.). Con la tabla comparativa de metodos y el coheficiente de correlación, vemos que el método optimo es average. Entonces podemos trazar el dendograma.
+
+dist <- dist(US_df, method = "euclidean")
+```
 
 
+* Realizamos los clusters
+```{r,message=FALSE,warning=FALSE}
+cluster_single <- hclust (d = dist, method = 'single')
+cluster_complete <- hclust (d = dist, method = 'complete')
+cluster_average <- hclust (d = dist, method = 'average')
+cluster_ward <- hclust (d = dist, method = 'ward.D2')
 
 
-#Como no queremos que el algoritmo de agrupamiento dependa de una unidad variable arbitraria, comenzamos escalando/estandarizando los datos usando la función R scale:
+par (mfrow = c(2,2))
+plot(cluster_single,cex=0.7, hang = -2)
+plot(cluster_complete,cex=0.7, hang = -2)
+plot(cluster_average,cex=0.7, hang = -2)
+plot(cluster_ward,cex=0.7, hang = -2)
 
-df <- scale(numDC)
-head(df)
-
-#Primero calculamos los valores de disimilitud con dist y luego usamos hclusty y especificamos el método de aglomeración que se usará (es decir, "completo", "promedio", "único", "sala.D"). Entonces podemos trazar el dendograma.
-
-# Dissimilarity matrix
-d <- dist(df, method = "euclidean")
-
-
-# vector con nombre de los métodos
-m <- c( "average", "single", "complete", "ward.D2", "median", "centroid")
-names(m) <- c( "average", "single", "complete", "ward.D2", "median", "centroid")
-# Función para calcular el coeficiente de correlación
-coef_cor <- function(x) {
-  cor(x=dist, cophenetic(hclust(d=dist, method = x)))
-}
-# Tabla comparativa
-coef_tabla <- map_dbl(m, coef_cor) 
-
-kbl(coef_tabla, booktabs = TRUE, align = "c",
-    caption = "Cuadro comparativo de los coeficientes de correlación",
-    col.names = rownames(coef_tabla)) %>%
-  kable_styling(position = "center",
-                latex_options = c("repeat_header", "hold_position"),
-                font_size = 9) %>%
-  add_header_above(c("Método", "Coeficiente de correlación"))
-
-
-
-
-
-
-# Hierarchical clustering using Complete Linkage
-#hc1 <- hclust(d, method = "complete" )
-#hc2 <- hclust(d, method ="median" )
-#hc3 <- hclust(d, method = "mean" )
-
-# Plot the obtained dendrogram
-#plot(hc1, cex = 0.6, hang = -1)
-#plot(hc2, cex = 0.6, hang = -1)
-#plot(hc3, cex = 0.6, hang = -1)
-
+par (mfrow = c(1,1))
 ```
 
 
 
+* Comparamos los coheficientes de correlación de los distintos métodos, y obtenemos una tabla comparativa donde se muestra que el método más optimos es "average" 
 
+```{r, message=FALSE,warning=FALSE}
+library(NbClust)
+library(factoextra)
+
+# Comparar coeficiente de correlación de los métodos
+
+# vector con nombre de los métodos
+m <- c( "average", "single", "complete", "ward.D2", "median", "centroid")
+names(m) <- c( "average", "single", "complete", "ward.D2", "median", "centroid")
+
+# Función para calcular el coeficiente de correlación
+coef_cor <- function(x) {
+  cor(x=dist, cophenetic(hclust(d=dist, method = x)))
+}
+
+# Tabla comparativa
+coef_tabla <- map_dbl(m, coef_cor) 
+coef_tabla
+```
+
+* Ahora vamos a calcular el número óptimo de clusters y realizar el cluster con el método y número óptimos.
+
+```{r,warning=FALSE,message=FALSE}
+# Aplicar todos los índices y métodos
+res.nbclust <- NbClust(US_df, distance = "euclidean",
+                       min.nc = 3, max.nc = 8, 
+                       method = "average", index ="all")
+```
+
+```{r,fig.width=12, fig.height=12,warning=FALSE,message=FALSE}
+# Realizar plot con el número óptimo de cluster y marcar los grupos
+plot(cluster_average, cex = 0.6, hang = -2)
+rect.hclust(cluster_average, k = 7, border = 2:8)
+```
+
+
+```{r,message=FALSE,warning=FALSE,fig.align=12,fig.height=15}
+
+
+# Clusters
+set.seed(12345)
+
+hc_average <- hclust(d=dist, method = "average")
+hc_complete <- hclust(d=dist, method = "complete")
+hc_single <- hclust(d=dist, method = "single")
+hc_centroid <- hclust(d=dist, method = "centroid")
+
+
+
+fviz_dend(x = hc_average, k=7,
+          cex = 0.3,
+          main = "Cluster método aver",
+          xlab = "Ciudades",
+          ylab = "Distancias",
+          type= "rectangle",
+          sub = "",
+          horiz = TRUE)+
+  geom_hline(yintercept = 3.8, linetype = "dashed")
+
+
+sub_grp <- cutree(hc_average, k = 7)
+table(sub_grp)
+
+
+fviz_cluster(list(data = US_df, cluster = sub_grp))
+
+
+# Comparar dendrogramas
+library(dendextend)
+
+hc_single <- as.dendrogram(hc_single) 
+hc_average <- as.dendrogram(hc_average)
+
+tanglegram(rank_branches(hc_single),rank_branches(hc_average),
+           main_left = "Single",
+           main_right = "Average", lab.cex= 0.7, margin_inner = 5, k_branches = 7)
+```
 
 
 
 ### Análisis de PCA
+
+
+
 
 ### Interpretar resultados
 
