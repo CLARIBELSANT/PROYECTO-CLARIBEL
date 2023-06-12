@@ -243,7 +243,11 @@ tr<-(table(BASE_DC$Gender)/206)*100
 barplot(tr,ylim=c(0,80))
 ```
 
-Obtener gráficas de paralelas, donde podemos observar la distribución de las variables numéricas en función de algún atributo (en este caso el género de los personajes)
+Obtenemo gráficas de paralelas, donde podemos observar la distribución de las variables numéricas en función de algún atributo (en este caso el género de los personajes). Recordemos que Una gráfica de coordenadas paralelas mapea cada fila en la tabla de datos como una línea. Cada atributo de una fila está representado por un punto en la línea. 
+   *Todas las mujeres tienen un peso  
+
+
+
 ```{r}
 library(lattice)
 c<-c(6,9,10,11,12,13,14,15)
@@ -280,18 +284,21 @@ dist <- dist(US_df, method = "euclidean")
 * Realizamos los clusters
 ```{r,message=FALSE,warning=FALSE}
 cluster_single <- hclust (d = dist, method = 'single')
-cluster_complete <- hclust (d = dist, method = 'complete')
-cluster_average <- hclust (d = dist, method = 'average')
-cluster_ward <- hclust (d = dist, method = 'ward.D2')
-
-
-par (mfrow = c(2,2))
 plot(cluster_single,cex=0.7, hang = -2)
+```
+```{r}
+cluster_complete <- hclust (d = dist, method = 'complete')
 plot(cluster_complete,cex=0.7, hang = -2)
+```
+```{r}
+
+cluster_average <- hclust (d = dist, method = 'average')
 plot(cluster_average,cex=0.7, hang = -2)
+```
+```{r}
+cluster_ward <- hclust (d = dist, method = 'ward.D2')
 plot(cluster_ward,cex=0.7, hang = -2)
 
-par (mfrow = c(1,1))
 ```
 
 
@@ -354,9 +361,7 @@ fviz_dend(x = hc_average, k=7,
           ylab = "Distancias",
           type= "rectangle",
           sub = "",
-          horiz = TRUE)+
-  geom_hline(yintercept = 3.8, linetype = "dashed")
-
+          horiz = TRUE)
 
 sub_grp <- cutree(hc_average, k = 7)
 table(sub_grp)
@@ -373,7 +378,7 @@ hc_average <- as.dendrogram(hc_average)
 
 tanglegram(rank_branches(hc_single),rank_branches(hc_average),
            main_left = "Single",
-           main_right = "Average", lab.cex= 0.3, margin_inner = 5, k_branches = 7)
+           main_right = "Average", lab.cex= 0.3, margin_inner = 3, k_branches = 7)
 ```
 
 
