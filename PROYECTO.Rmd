@@ -183,7 +183,7 @@ Dividimos nuestra nueva base de datos por compañía. En lo que sigue trabajarem
 BASE_DC <- as.data.frame(subset(Dc_Marvel_StatsInfo, Publisher == "DC Comics"))  
 summary(BASE_DC)
 rownames (BASE_DC) <- BASE_DC$Name
-BASE_DC
+
 
 ```
 
