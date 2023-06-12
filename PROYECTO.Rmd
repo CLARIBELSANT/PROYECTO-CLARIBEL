@@ -182,6 +182,9 @@ Dividimos nuestra nueva base de datos por compañía. En lo que sigue trabajarem
 ```{r}
 BASE_DC <- as.data.frame(subset(Dc_Marvel_StatsInfo, Publisher == "DC Comics"))  
 summary(BASE_DC)
+rownames (BASE_DC) <- BASE_DC$Name
+BASE_DC
+
 ```
 
 * En este caso las variables numéricas tienen escalas muy diferentes de medición (obtenemos valores negativos y mayores a 1000). Por esta razón trabajamos con el coeficiente de correlación.
@@ -190,7 +193,6 @@ summary(BASE_DC)
 
 ```{r}
 numDC<-dplyr::select_if(BASE_DC, is.numeric)
-
 cov(numDC)
 M<-cor(numDC)
 M
@@ -206,7 +208,7 @@ Las mujeres tienen menor altura y menor peso en general. En general, la altura e
   * Las otras variables no dependen de la altura ni del peso.
   * En el poder con respecto al combate observemos que el poder no depende del combate.
   * Los heroes hombres son los que tienen mayor poder y mayor combate.
- 
+  *Usamos los gráficos de paralelas, donde podemos observar la distribución de las variables numéricas en función de algún atributo (en este caso el género).
 ```{r, warning=FALSE,message=FALSE,fig.width=12, fig.height=12}
 #install.packages("psych)
 library(psych)
@@ -240,6 +242,15 @@ barplot(t,ylim=c(0,200))
 tr<-(table(BASE_DC$Gender)/206)*100
 barplot(tr,ylim=c(0,80))
 ```
+
+Obtener gráficas de paralelas, donde podemos observar la distribución de las variables numéricas en función de algún atributo (en este caso el género de los personajes)
+```{r}
+library(lattice)
+c<-c(6,9,10,11,12,13,14,15)
+parallelplot(~BASE_DC[,c] | Gender, data=BASE_DC)
+```
+
+
 
 ### Análisis por clusters
 * Ahora queremos encontrar patrones o grupos (clusters) dentro del conjunto.
@@ -338,7 +349,7 @@ hc_centroid <- hclust(d=dist, method = "centroid")
 
 fviz_dend(x = hc_average, k=7,
           cex = 0.3,
-          main = "Cluster método aver",
+          main = "Cluster método average",
           xlab = "Personajes",
           ylab = "Distancias",
           type= "rectangle",
@@ -448,7 +459,7 @@ fviz_pca_var(res.pca,
  * Los resultados los fuimos interpretando en cada paso de análisis de este proyecto
 
 ### Resúmen y conclusiones
- * AL quitar los NA usamos los métodos de eliminación (para la columna con más NA), sustitución (para los valores no númericos) y imputación. En este último fuimos escogiendo la imputación adecuada (que elegimos basándonos en el plot de densidad). Filtrando los personajes de DC, obtuvimos una base de datos a la que llamamos BASE_DC la cuál no contenía valores faltantes ni valores con NA y contaba solo con los datos de DC. Tambíen definimos una base que seleccionaba de BASE_DC, solo los datos numéricos, a esta la llamamos numDC.
+ * AL quitar los NA usamos los métodos de eliminación (para la columna con más NA), sustitución (para los valores no númericos) y imputación. En este último fuimos escogiendo la imputación adecuada (que elegimos basándonos en el plot de densidad). El nétodo usado al hacer la imputación de los datos fue el más óptimo y al observat las gráficas de densidad concluimos que fue muy bueno. Filtrando los personajes de DC, obtuvimos una base de datos a la que llamamos BASE_DC la cuál no contenía valores faltantes ni valores con NA y contaba solo con los datos de DC. Tambíen definimos una base que seleccionaba de BASE_DC, solo los datos numéricos, a esta la llamamos numDC.
  
  * Realizamos las matrices de correlación y covarianza, y concluimos que era más apropiado escalar y trabajar con la matriz de correlación. Las variables con mayor y menor correlación son combate-inteligencia y velocidad-altura respectivamente.
  
@@ -471,4 +482,16 @@ Hay poco más de 50 mujeres y aproximademente 150 hombres,es decir, hay mucho m�
   * Calculamos los componentes principales con la función princomp. Obtuvimos datos como la desviación estandar, proporción de varianza y proporción acumulativa con 1, 2,..,7 y 8 componentes. 
   
   * Para saber con cuantos componentes nos conviene trabajar hicimos el gráfico de codo. Ahí concluimmos que es mejor trabajar con 2 o tal vez 3 componentes, pero dado a que es más facil interpretar 2 dimenciones, escogemos la primera opción. Finalmente, graficamos a los personajes y los coroleamos por perfiles similares.
+
+
+
+
+
+
+
+
+
+
+
+
 
