@@ -243,8 +243,9 @@ tr<-(table(BASE_DC$Gender)/206)*100
 barplot(tr,ylim=c(0,80))
 ```
 
-Obtenemo gráficas de paralelas, donde podemos observar la distribución de las variables numéricas en función de algún atributo (en este caso el género de los personajes). Recordemos que Una gráfica de coordenadas paralelas mapea cada fila en la tabla de datos como una línea. Cada atributo de una fila está representado por un punto en la línea. 
-   *Todas las mujeres tienen un peso  
+* Obtenemo gráficas de paralelas, donde podemos observar la distribución de las variables numéricas en función de algún atributo (en este caso el género de los personajes). Recordemos que Una gráfica de coordenadas paralelas mapea cada fila en la tabla de datos como una línea. Cada atributo de una fila está representado por un punto en la línea. 
+   * Todas las mujeres tienen un peso pequeño y similar. La variable de inteligencia es inversamente proporsional al peso en este caso hay muchas mujeres inteligentes y solo algunas con inteligencia mínima.La fuerza no depende de la inteligencia ni del peso. Las mujeres que tienen el mismo peso tienen apróximadamente la misma fuerza, la mayoría de las mujeres no tienen mucha fuerza, en relación con los hombres. La durabilidad, poder y combate son variables que no dependen de las otras variables.
+  
 
 
 
@@ -282,22 +283,22 @@ dist <- dist(US_df, method = "euclidean")
 
 
 * Realizamos los clusters
-```{r,message=FALSE,warning=FALSE}
+```{r,message=FALSE,warning=FALSE,fig.align=12,fig.height=12}
 cluster_single <- hclust (d = dist, method = 'single')
-plot(cluster_single,cex=0.7, hang = -2)
+plot(cluster_single,cex=0.4, hang = -2)
 ```
-```{r}
+```{r,warning=FALSE,message=FALSE,fig.align=12,fig.height=12}
 cluster_complete <- hclust (d = dist, method = 'complete')
-plot(cluster_complete,cex=0.7, hang = -2)
+plot(cluster_complete,cex=0.4, hang = -2)
 ```
-```{r}
+```{r,warning=FALSE,message=FALSE,fig.align=12,fig.height=12}
 
 cluster_average <- hclust (d = dist, method = 'average')
-plot(cluster_average,cex=0.7, hang = -2)
+plot(cluster_average,cex=0.4, hang = -2)
 ```
-```{r}
+```{r,fig.align=12,fig.height=12,warning=FALSE,message=FALSE}
 cluster_ward <- hclust (d = dist, method = 'ward.D2')
-plot(cluster_ward,cex=0.7, hang = -2)
+plot(cluster_ward,cex=0.4, hang = -2)
 
 ```
 
